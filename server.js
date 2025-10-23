@@ -6,6 +6,7 @@ import authRoutes from "./src/routes/auth.js";
 import courseRoutes from "./src/routes/courses.js";
 import enrollmentRoutes from "./src/routes/enrollments.js";
 import gradeRoutes from "./src/routes/grades.js";
+import userRoutes from "./src/routes/users.js";
 
 dotenv.config();
 const { Pool } = pkg;
@@ -48,6 +49,7 @@ app.use("/auth", authRoutes);
 app.use("/courses", courseRoutes);
 app.use("/enrollments", enrollmentRoutes);
 app.use("/grades", gradeRoutes);
+app.use("/users", userRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
