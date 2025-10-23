@@ -4,7 +4,7 @@ Techtonica CourseHub is a full-stack web application designed to help students *
 
 This project is built with the **Node.js + Express** backend and a **PostgreSQL** database, deployed on Heroku.
 
-> 💻 Frontend will be set up in a separate repo.
+> 💻 Frontend repo: https://github.com/Reginatam429/Techtonica-Academy-CourseHub
 
 ---
 
