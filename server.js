@@ -1,0 +1,51 @@
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import pkg from "pg";
+import authRoutes from "./src/routes/auth.js";
+import courseRoutes from "./src/routes/courses.js";
+
+dotenv.config();
+const { Pool } = pkg;
+
+// Single pool. Export it so routes can import/use it.
+export const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    // local: no SSL; Heroku: SSL required
+    ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
+});
+
+const app = express();
+app.use(cors({
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    credentials: true,
+}));
+app.use(express.json());
+
+// Health
+app.get("/health", (_req, res) => res.json({ ok: true }));
+
+// Root
+app.get("/", (_req, res) => {
+    res.send("Techtonica Academy CourseHub backend is running");
+});
+
+// DB test
+app.get("/db-test", async (_req, res) => {
+    try {
+        const result = await pool.query("SELECT NOW()");
+        res.json({ serverTime: result.rows[0] });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Database connection failed" });
+    }
+});
+
+// Mount routes
+app.use("/auth", authRoutes);
+app.use("/courses", courseRoutes);
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`✅ Server running on port ${PORT}`);
+});
