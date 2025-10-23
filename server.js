@@ -7,11 +7,13 @@ import courseRoutes from "./src/routes/courses.js";
 import enrollmentRoutes from "./src/routes/enrollments.js";
 import gradeRoutes from "./src/routes/grades.js";
 import userRoutes from "./src/routes/users.js";
+import helmet from "helmet";
+import morgan from "morgan";
 
 dotenv.config();
 const { Pool } = pkg;
 
-// Single pool. Export it so routes can import/use it.
+// Pool config
 export const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     // local: no SSL; Heroku: SSL required
@@ -50,6 +52,9 @@ app.use("/courses", courseRoutes);
 app.use("/enrollments", enrollmentRoutes);
 app.use("/grades", gradeRoutes);
 app.use("/users", userRoutes);
+
+app.use(helmet());
+app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

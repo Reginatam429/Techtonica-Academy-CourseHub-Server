@@ -10,7 +10,7 @@
     "db:drop": "dropdb techtonica_coursehub || true",
     "db:schema": "psql techtonica_coursehub -f db/schema.sql",
     "db:seed": "psql techtonica_coursehub -f db/seed.sql",
-    "db:reset": "npm run db:drop && npm run db:create && npm run db:schema && npm run db:seed"
+    "db:reset": "psql $DATABASE_URL -f db/schema.sql && psql $DATABASE_URL -f db/seed.sql"
   },
   "keywords": [],
   "author": "",
@@ -21,7 +21,9 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
+    "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.1",
     "pg": "^8.16.3"
   },
   "type": "module",
