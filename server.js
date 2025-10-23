@@ -4,6 +4,8 @@ import dotenv from "dotenv";
 import pkg from "pg";
 import authRoutes from "./src/routes/auth.js";
 import courseRoutes from "./src/routes/courses.js";
+import enrollmentRoutes from "./src/routes/enrollments.js";
+import gradeRoutes from "./src/routes/grades.js";
 
 dotenv.config();
 const { Pool } = pkg;
@@ -44,6 +46,8 @@ app.get("/db-test", async (_req, res) => {
 // Mount routes
 app.use("/auth", authRoutes);
 app.use("/courses", courseRoutes);
+app.use("/enrollments", enrollmentRoutes);
+app.use("/grades", gradeRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
