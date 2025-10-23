@@ -1,4 +1,4 @@
-# 🏫 Techtonica-Academy-CourseHub-Backend
+# 🏫 Techtonica-Academy-CourseHub-Server
 
 Techtonica CourseHub is a full-stack web application designed to help students **browse and enroll in courses**, while **teachers and admins can manage courses and assign grades**. It features secure authentication, role-based access control, and prerequisite checks for course enrollment.
 
