@@ -5,14 +5,20 @@ import { pool } from "../../server.js";
 
 const router = express.Router();
 
+// helper: escape string for use inside a RegExp
+function escapeRegExp(s) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 // Unique emails
 async function generateUniqueEmail(firstName, lastName) {
-    const base = `${firstName}`.trim().toLowerCase().replace(/\s+/g, ".")
-                + "." +
-                `${lastName}`.trim().toLowerCase().replace(/\s+/g, ".");
+    const left = String(firstName).trim().toLowerCase().replace(/[^a-z0-9]+/g, ".");
+    const right = String(lastName).trim().toLowerCase().replace(/[^a-z0-9]+/g, ".");
+    const base = `${left}.${right}`.replace(/\.+/g, ".").replace(/^\.+|\.+$/g, "");
     const domain = "@coursehub.io";
-    const like = `${base}%${domain}`;
 
+    // Find any existing emails that match base, base2, base3, ... at our domain
+    const like = `${base}%@coursehub.io`;
     const { rows } = await pool.query(
         `SELECT email FROM users WHERE email ILIKE $1 ORDER BY email ASC`,
         [like]
@@ -20,16 +26,21 @@ async function generateUniqueEmail(firstName, lastName) {
 
     if (rows.length === 0) return `${base}${domain}`;
 
-    // Find next available suffix
-    let next = 2; // if base exists, the next is "2"
+    // Build a safe regex: ^base(\d+)?@coursehub\.io$
+    const safeBase = escapeRegExp(base);
+    const safeDomain = escapeRegExp(domain);
+    const re = new RegExp(`^${safeBase}(\\d+)?${safeDomain}$`, "i");
+
+    let next = 2; // if base is taken, start from 2
     for (const r of rows) {
-        const m = r.email.match(new RegExp(`^${base}(\\d+)?${domain}$`, "i"));
-        if (m && m[1]) {
-        const n = parseInt(m[1], 10);
-        if (n >= next) next = n + 1;
-        } else if (r.email.toLowerCase() === `${base}${domain}`) {
-        // base taken with no suffix
-        next = Math.max(next, 2);
+        const m = r.email.match(re);
+        if (!m) continue;
+        if (m[1]) {
+            const n = parseInt(m[1], 10);
+            if (Number.isFinite(n) && n >= next) next = n + 1;
+        } else {
+            // exact base@domain exists
+            next = Math.max(next, 2);
         }
     }
     return `${base}${next}${domain}`;
