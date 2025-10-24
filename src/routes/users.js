@@ -63,41 +63,62 @@ router.post("/", requireAuth, requireRole("ADMIN"), async (req, res) => {
     }
 });
 
-//  LIST + SEARCH Admin
+// LIST + SEARCH (role-aware)
 // GET /users?query=foo
-// Matches id (numeric), name, email, major
-router.get("/", requireAuth, requireRole("ADMIN"), async (req, res) => {
-    try {
+// ADMIN: all users
+// TEACHER: only STUDENT users
+// STUDENT: 403
+router.get("/", requireAuth, async (req, res) => {
+        try {
         const q = (req.query.query || "").trim();
-        const params = [];
-        let where = "";
-
-        if (q) {
-        const maybeId = Number(q);
-        if (!Number.isNaN(maybeId)) {
-            params.push(maybeId);
-            params.push(`%${q}%`, `%${q}%`, `%${q}%`);
-            where = `WHERE u.id = $1 OR u.name ILIKE $2 OR u.email ILIKE $3 OR u.major ILIKE $4`;
-        } else {
-            params.push(`%${q}%`, `%${q}%`, `%${q}%`);
-            where = `WHERE u.name ILIKE $1 OR u.email ILIKE $2 OR u.major ILIKE $3`;
-        }
-    }
-
-    const sql = `
-        SELECT u.id, u.role, u.name, u.email,
-                u.student_id AS "studentId", u.major, u.created_at, u.updated_at
+        const like = `%${q}%`;
+    
+        let sql, params;
+    
+        if (req.user.role === "ADMIN") {
+            sql = `
+            SELECT u.id, u.role, u.name, u.email,
+                    u.student_id AS "studentId", u.major,
+                    u.created_at, u.updated_at
             FROM users u
-        ${where}
-        ORDER BY u.id ASC
-        LIMIT 200
-        `;
+            WHERE ($1 = '' OR
+                    u.name ILIKE $2 OR
+                    u.email ILIKE $2 OR
+                    COALESCE(u.student_id,'') ILIKE $2 OR
+                    COALESCE(u.major,'') ILIKE $2)
+            ORDER BY u.id ASC
+            LIMIT 200
+            `;
+            params = [q, like];
+    
+        } else if (req.user.role === "TEACHER") {
+            sql = `
+            SELECT u.id, u.role, u.name, u.email,
+                    u.student_id AS "studentId", u.major,
+                    u.created_at, u.updated_at
+            FROM users u
+            WHERE u.role = 'STUDENT'
+                AND ($1 = '' OR
+                    u.name ILIKE $2 OR
+                    u.email ILIKE $2 OR
+                    COALESCE(u.student_id,'') ILIKE $2 OR
+                    COALESCE(u.major,'') ILIKE $2)
+            ORDER BY u.id ASC
+            LIMIT 200
+            `;
+            params = [q, like];
+    
+        } else {
+            return res.status(403).json({ error: "Forbidden" });
+        }
+    
         const { rows } = await pool.query(sql, params);
         return res.json(rows);
-    } catch (e) {
+    
+        } catch (e) {
         console.error(e);
         return res.status(500).json({ error: "Server error" });
-    }
+        }
 });
 
 // READ Admin
