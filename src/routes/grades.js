@@ -18,13 +18,24 @@ const GRADE_POINTS = {
     D: 1.0, F: 0.0
 };
 
-/**
- * POST /grades
- * Teacher/Admin can assign a grade to a student in a course.
- * Teachers can only grade their own courses.
- * Keeps history - inserts a new record each time a grade is assigned.
- * Body: { studentId, courseId, value }
- */
+// Points mapping for grade_letter enum
+
+const GRADE_POINTS_SQL = `
+    CASE g.value
+        WHEN 'A_PLUS'  THEN 4.3
+        WHEN 'A'       THEN 4.0
+        WHEN 'A_MINUS' THEN 3.7
+        WHEN 'B_PLUS'  THEN 3.3
+        WHEN 'B'       THEN 3.0
+        WHEN 'B_MINUS' THEN 2.7
+        WHEN 'C_PLUS'  THEN 2.3
+        WHEN 'C'       THEN 2.0
+        WHEN 'C_MINUS' THEN 1.7
+        WHEN 'D'       THEN 1.0
+        WHEN 'F'       THEN 0.0
+    END
+`;
+
 router.post(
     "/",
     requireAuth,
@@ -64,10 +75,8 @@ router.post(
     }
 );
 
-/**
- * GET /grades/me
- * Student: full grade history (all courses, newest first)
- */
+// GET /grades/me Student: full grade history (all courses, newest first)
+
 router.get(
     "/me",
     requireAuth,
@@ -90,10 +99,8 @@ router.get(
     }
 );
 
-/**
- * GET /grades/me/current
- * Student: latest (current) grade per course
- */
+// GET /grades/me/current Student: latest (current) grade per course
+
 router.get(
     "/me/current",
     requireAuth,
@@ -117,10 +124,8 @@ router.get(
     }
 );
 
-/**
- * GET /grades/me/gpa
- * Student: GPA computed from latest grade per course
- */
+// GET /grades/me/gpa Student: GPA computed from latest grade per course
+
 router.get(
     "/me/gpa",
     requireAuth,
@@ -151,11 +156,8 @@ router.get(
     }
 );
 
-/**
- * GET /grades/course/:courseId
- * Teacher/Admin: view grade history for a course
- * - Teachers restricted to their own course
- */
+// GET /grades/course/:courseId Teacher/Admin: view grade history for a course - Teachers restricted to their own course
+
 router.get(
     "/course/:courseId",
     requireAuth,

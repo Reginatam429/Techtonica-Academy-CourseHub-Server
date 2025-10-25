@@ -125,13 +125,77 @@ router.get("/", requireAuth, async (req, res) => {
 router.get("/:id", requireAuth, requireRole("ADMIN"), async (req, res) => {
     try {
         const id = Number(req.params.id);
-        const { rows } = await pool.query(
-        `SELECT id, role, name, email, student_id AS "studentId", major, created_at, updated_at
+        const { rows: userRows } = await pool.query(
+            `SELECT id, role, name, email, student_id AS "studentId", major, created_at, updated_at
             FROM users WHERE id=$1`,
-        [id]
+            [id]
         );
-        if (!rows[0]) return res.status(404).json({ error: "Not found" });
-        return res.json(rows[0]);
+        const user = userRows[0];
+        if (!user) return res.status(404).json({ error: "Not found" });
+
+        // Teachers can only view students they teach
+        if (req.user.role === "TEACHER" && user.role === "STUDENT") {
+            const { rows: teaching } = await pool.query(
+                `SELECT 1
+                FROM enrollments e
+                JOIN courses c ON c.id = e.course_id
+                WHERE e.student_id = $1 AND c.teacher_id = $2
+                LIMIT 1`,
+                [id, req.user.id]
+            );
+            if (teaching.length === 0) {
+                return res.status(403).json({ error: "Not authorized to view this student" });
+            }
+        }
+
+        // GPA calculation (only for student users)
+        let gpa = null;
+        let totalCredits = 0;
+
+        if (user.role === "STUDENT") {
+            const { rows: gradeRows } = await pool.query(`
+                WITH latest AS (
+                    SELECT DISTINCT ON (g.course_id)
+                        g.course_id, g.value
+                    FROM grades g
+                    WHERE g.student_id = $1
+                    ORDER BY g.course_id, g.assigned_at DESC
+                )
+                SELECT c.credits,
+                    CASE latest.value
+                        WHEN 'A_PLUS'  THEN 4.0
+                        WHEN 'A'       THEN 4.0
+                        WHEN 'A_MINUS' THEN 3.7
+                        WHEN 'B_PLUS'  THEN 3.3
+                        WHEN 'B'       THEN 3.0
+                        WHEN 'B_MINUS' THEN 2.7
+                        WHEN 'C_PLUS'  THEN 2.3
+                        WHEN 'C'       THEN 2.0
+                        WHEN 'C_MINUS' THEN 1.7
+                        WHEN 'D'       THEN 1.0
+                        WHEN 'F'       THEN 0.0
+                    END AS points
+                FROM latest
+                JOIN courses c ON c.id = latest.course_id
+            `, [id]);
+
+            let totalPoints = 0;
+            for (const r of gradeRows) {
+                if (r.points != null) {
+                    totalPoints += r.points * r.credits;
+                    totalCredits += r.credits;
+                }
+            }
+            if (totalCredits > 0) {
+                gpa = Number((totalPoints / totalCredits).toFixed(2));
+            }
+        }
+
+        return res.json({
+            ...user,
+            gpa
+        });
+
     } catch (e) {
         console.error(e);
         return res.status(500).json({ error: "Server error" });
