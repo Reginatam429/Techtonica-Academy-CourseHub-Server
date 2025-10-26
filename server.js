@@ -46,6 +46,10 @@ app.get("/db-test", async (_req, res) => {
     }
 });
 
+// Middleware
+app.use(helmet());
+app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
+
 // Mount routes
 app.use("/auth", authRoutes);
 app.use("/courses", courseRoutes);
@@ -53,10 +57,12 @@ app.use("/enrollments", enrollmentRoutes);
 app.use("/grades", gradeRoutes);
 app.use("/users", userRoutes);
 
-app.use(helmet());
-app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
-
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`✅ Server running on port ${PORT}`);
-});
+
+if (process.env.NODE_ENV !== "test") {
+    app.listen(PORT, () => {
+        console.log(`✅ Server running on port ${PORT}`);
+    });
+}
+
+export default app;
