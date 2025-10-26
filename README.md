@@ -6,17 +6,8 @@ This project is built with the **Node.js + Express** backend and a **PostgreSQL*
 
 > 💻 Frontend repo: https://github.com/Reginatam429/Techtonica-Academy-CourseHub
 
----
+> 🌐 Heroku Deployment: https://techtonica-coursehub-api-1dcb105ae03b.herokuapp.com
 
-## 🚀 MVP Features
-
-- 🔐 **JWT-based authentication** for Admin, Teacher, and Student roles  
-- 🧑‍🏫 Admin & Teacher can create and manage courses  
-- 🧑‍🎓 Students can self-enroll and unenroll in courses  
-- 📜 Teachers can assign and view grades for their courses  
-- 📈 Prerequisite enforcement for enrollment (must have passed required courses)  
-- 🗃️ Database seeded with sample users and courses  
-- ☁️ Deployed to Heroku with a managed Postgres DB
 
 ---
 
@@ -39,11 +30,39 @@ git clone https://github.com/Reginatam429/Techtonica-Academy-CourseHub-Server.gi
 cd Techtonica-Academy-CourseHub-Server
 ````
 
-### 2. Install Dependencies
+### 2. Install Dependencies and Run
 
 ```bash
 npm install
+npm start  
 ```
+Optional dev script (if you add nodemon): npm run dev
+
+📦 Dependencies & Why They’re Here
+
+Runtime
+
+ - express – HTTP server & routing
+
+ - pg – PostgreSQL client
+
+ - bcrypt – secure password hashing
+
+ - jsonwebtoken – JWT-based auth
+
+ - cors – CORS headers for frontend → backend calls
+
+ - dotenv – load environment variables from .env
+
+ - helmet – secure HTTP headers
+
+ - morgan – request logging
+
+Dev/Test
+
+ - jest – test runner
+
+ - supertest – HTTP assertions against the Express app
 
 ### 3. Set Up Environment Variables
 
@@ -62,13 +81,19 @@ JWT_SECRET=your_jwt_secret_here
 CLIENT_URL=http://localhost:5173
 ```
 
-### 4. Initialize Database
+### 4. 🗄️ Database Set up
 
-```bash
+Schema & Seed (source of truth)
+
+ - db/schema.sql – types, tables, indexes
+
+ - db/seed.sql – initial users (Admin/Teacher/Students), demo courses, one prerequisite, enrollments, sample grades
+
+Apply locally:
+```
 psql techtonica_coursehub < db/schema.sql
 psql techtonica_coursehub < db/seed.sql
 ```
-
 ### 5. Run the Server
 
 ```bash
@@ -91,12 +116,66 @@ https://techtonica-coursehub-api-1dcb105ae03b.herokuapp.com
 
 ## 📦 API Routes
 
-> All routes require `Content-Type: application/json`.
-> Authenticated routes also require:
->
-> ```
-> Authorization: Bearer <token>
-> ```
+Auth
+
+ - POST /auth/register – Student signup (auto email + studentId)
+
+ - POST /auth/login – Login, receive JWT
+
+Users
+
+ - POST /users (ADMIN) – Create user (Student/Teacher/Admin)
+
+ - GET /users?query= (ADMIN) – Search all users by name/email/major/id
+
+ - GET /users?query= (TEACHER) – Search students only
+
+ - GET /users/:id (ADMIN) – Read user by id
+
+ - PUT /users/:id (ADMIN) – Update user (role, name, email, major, password, studentId)
+
+ - DELETE /users/:id (ADMIN) – Delete user
+
+Courses
+
+ - GET /courses – Public list, includes available_seats
+
+ - POST /courses (TEACHER/ADMIN) – Create course (owner=teacher)
+
+ - PUT /courses/:id (Owner TEACHER/ADMIN) – Update
+
+ - DELETE /courses/:id (Owner TEACHER/ADMIN) – Delete
+
+ - GET /courses/:id/prereqs – List prereqs
+
+ - POST /courses/:id/prereqs (Owner TEACHER/ADMIN) – Add prereq ({ prereqId })
+
+ - DELETE /courses/:id/prereqs/:prereqId (Owner TEACHER/ADMIN) – Remove prereq
+
+Enrollments
+
+ - POST /enrollments (STUDENT) – Enroll { courseId }
+
+ - Checks capacity, prereqs (latest grade must not be F)
+
+ - GET /enrollments/me (STUDENT) – My enrollments
+
+ - DELETE /enrollments/:enrollmentId (STUDENT) – Unenroll by enrollment id
+
+ - DELETE /enrollments/by-course/:courseId (STUDENT) – Unenroll by course id
+
+ - GET /enrollments/course/:courseId (Owner TEACHER/ADMIN) – Course roster
+
+Grades
+
+ - POST /grades (Owner TEACHER/ADMIN) – Assign grade { studentId, courseId, value }
+(A+…F, keeps history)
+
+ - GET /grades/me (STUDENT) – My grade history
+
+ - GET /grades/me/gpa (STUDENT) – My GPA
+
+ - GET /grades/student/:studentId/gpa (Owner TEACHER/ADMIN) – A student’s GPA (teacher: only their students; admin: any)
 
 ---
 
@@ -106,118 +185,44 @@ https://techtonica-coursehub-api-1dcb105ae03b.herokuapp.com
 
 Log in with email and password.
 
-**Body**
+ - Registration (student self-signup): POST /auth/register
 
-```json
-{
-  "email": "testteacher@coursehub.io",
-  "password": "pass123"
-}
+   - Auto-generates a unique academy email like first.last@coursehub.io, first.last2@... if needed
+
+   - Auto-generates a unique studentId (S####) if not provided
+
+ - Role-based access (RBAC): STUDENT, TEACHER, ADMIN
+
+   - Admin: manage users, view all users
+
+   - Teacher: manage their own courses, view rosters, grade their students
+
+   - Student: enroll/unenroll, view their enrollments and grades
+
+JWT is expected in requests as:
 ```
-
-**Response**
-
-```json
-{
-  "token": "jwt-token",
-  "user": {
-    "id": 9,
-    "role": "TEACHER",
-    "name": "Test Teacher",
-    "email": "testteacher@coursehub.io"
-  }
-}
+Authorization: Bearer <token>
+Content-Type: application/json
 ```
-
 ---
 
-### 🧑 User Management (Admin only)
-
-#### `POST /users` – Create a user
-
-#### `GET /users?query=<search>` – Search users
-
-#### `PUT /users/:id` – Update user info
-
-#### `DELETE /users/:id` – Delete user
-
-**Example Body**
-
-```json
-{
-  "role": "TEACHER",
-  "name": "New Teacher",
-  "email": "teacher@coursehub.io",
-  "password": "pass123"
-}
-```
-
----
-
-### 📚 Courses
-
-#### `GET /courses` – List all courses (public)
-
-#### `POST /courses` – Create a course (Teacher/Admin only)
-
-```json
-{
-  "code": "CS301",
-  "name": "Algorithms",
-  "credits": 3,
-  "enrollment_limit": 25
-}
-```
-
----
-
-### 📝 Enrollments
-
-#### `POST /enrollments` – Student enrolls in a course
-
-```json
-{
-  "courseId": 2
-}
-```
-
-#### `GET /enrollments/me` – List courses student is enrolled in
-
-#### `DELETE /enrollments/:enrollmentId` – Unenroll by enrollment ID
-
-#### `DELETE /enrollments/by-course/:courseId` – Unenroll by course ID
-
-#### `GET /enrollments/course/:courseId` – Teacher views roster for their course
-
----
-
-### 🏆 Grades
-
-#### `POST /grades` – Teacher/Admin assigns grade
-
-```json
-{
-  "studentId": 3,
-  "courseId": 2,
-  "value": "A"
-}
-```
-
-#### `GET /grades/me` – Student views their grades
-
----
 
 ## 🧪 Testing
 
-You can use `curl` or Postman for testing endpoints.
-
-Example:
-
-```bash
-curl -X POST https://techtonica-coursehub-api-1dcb105ae03b.herokuapp.com/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"testteacher@coursehub.io","password":"adminpass"}'
+Run:
 ```
+npm test
+```
+
+basic.tests.js:
+
+1. GET / returns 200 – Verifies server is up
+
+2. POST /auth/login fails with bad creds – Ensures proper 401 handling
+
+3. POST /auth/login succeeds for seeded admin – Confirms bcrypt + JWT flow
+
+These use Jest + Supertest against the Express app (app export), no need to run the server separately.
 
 ---
 
@@ -225,5 +230,6 @@ curl -X POST https://techtonica-coursehub-api-1dcb105ae03b.herokuapp.com/auth/lo
 
 * ✅ Add password reset functionality
 * 📅 Add course scheduling & sections
-* 🧑‍🎓 Student transcripts and GPA calculation
+* 🧑‍🎓 Student transcripts 
 * 🛡️ Input validation and improved error handling
+* 🧪 More test coverage (prereq & capacity checks)
