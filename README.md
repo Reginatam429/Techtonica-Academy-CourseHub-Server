@@ -17,7 +17,7 @@ This project is built with the **Node.js + Express** backend and a **PostgreSQL*
 - **Database**: PostgreSQL (Heroku Postgres)  
 - **Authentication**: JWT (JSON Web Token)  
 - **Deployment**: Heroku  
-- **Dev Tools**: Curl, Postman, bcrypt, pg
+- **Dev Tools**: Curl, Postman, bcrypt, pg, Swagger UI
 
 ---
 
@@ -114,7 +114,30 @@ https://techtonica-coursehub-api-1dcb105ae03b.herokuapp.com
 
 ---
 
-## 📦 API Routes
+## 📦 API Documentation
+
+This project uses ```Swagger UI```
+ to provide interactive API documentation.
+
+Once the server is running, open:
+
+https://techtonica-coursehub-api-1dcb105ae03b.herokuapp.com/
+
+
+You’ll be redirected to:
+
+https://techtonica-coursehub-api-1dcb105ae03b.herokuapp.com/docs
+
+
+From there you can:
+
+- View all available routes and their request/response schemas
+
+- Try out requests directly in the browser (e.g., POST /auth/login, GET /courses)
+
+- See example payloads and response structures
+
+🔐 Note: ```Some endpoints require a JWT in the Authorization header. You can get this token by logging in with valid credentials through the /auth/login route.```
 
 Auth
 
