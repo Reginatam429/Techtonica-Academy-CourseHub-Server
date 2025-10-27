@@ -139,26 +139,34 @@ router.get("/me", requireAuth, requireRole("STUDENT"), async (req, res) => {
 router.get("/course/:courseId", requireAuth, requireRole("TEACHER","ADMIN"), async (req, res) => {
     const courseId = Number(req.params.courseId);
     try {
-      // Teacher can only view their own course (admins can view all)
+      // if TEACHER, enforce ownership
         if (req.user.role === "TEACHER") {
             const { rows: owner } = await pool.query("SELECT teacher_id FROM courses WHERE id=$1", [courseId]);
             if (!owner[0]) return res.status(404).json({ error: "Course not found" });
             if (owner[0].teacher_id !== req.user.id) return res.status(403).json({ error: "Not your course" });
         }
-    
+
     const { rows } = await pool.query(
-            `SELECT e.id, u.id AS student_id, u.name, u.email, u.student_id AS student_code, e.created_at
-            FROM enrollments e
-            JOIN users u ON u.id = e.student_id
-            WHERE e.course_id = $1
-            ORDER BY u.name ASC`,
-            [courseId]
+        `
+        SELECT DISTINCT ON (g.student_id)
+            g.student_id,
+            u.name  AS student_name,
+            u.email,
+            g.value::text AS grade,
+            g.assigned_at
+        FROM grades g
+        JOIN users u ON u.id = g.student_id
+        WHERE g.course_id = $1
+        ORDER BY g.student_id, g.assigned_at DESC
+        `,
+        [courseId]
         );
-        res.json(rows);
-        } catch (e) {
+
+    return res.json(rows);
+    } catch (e) {
         console.error(e);
-        res.status(500).json({ error: "Server error" });
-        }
+        return res.status(500).json({ error: "Server error" });
+    }
 });
 
 
