@@ -1,3 +1,56 @@
+/**
+ * @openapi
+ * /courses:
+ *   get:
+ *     summary: List courses (optional text search via ?query=)
+ *     parameters:
+ *       - in: query
+ *         name: query
+ *         schema:
+ *           type: string
+ *     responses:
+ *       '200':
+ *         description: OK
+ *
+ *   post:
+ *     summary: Create a course
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - code
+ *               - name
+ *               - credits
+ *             properties:
+ *               code:
+ *                 type: string
+ *                 example: CS101
+ *               name:
+ *                 type: string
+ *                 example: Intro to CS
+ *               credits:
+ *                 type: integer
+ *                 example: 3
+ *               enrollment_limit:
+ *                 type: integer
+ *                 example: 30
+ *               prereqIds:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *     responses:
+ *       '201':
+ *         description: Created
+ *       '401':
+ *         description: Unauthorized
+ */
+
+
 import express from "express";
 import { pool } from "../../server.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";

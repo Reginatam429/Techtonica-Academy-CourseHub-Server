@@ -1,3 +1,37 @@
+/**
+ * @openapi
+ * /grades:
+ *   post:
+ *     summary: Record a grade
+ *     security: [ { bearerAuth: [] } ]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [studentId, courseId, value]
+ *             properties:
+ *               studentId: { type: integer, example: 10 }
+ *               courseId:  { type: integer, example: 1 }
+ *               value:     { type: string, example: A }
+ *     responses:
+ *       201: { description: Created }
+ *       401: { description: Unauthorized }
+ */
+
+/**
+ * @openapi
+ * /grades/me/gpa:
+ *   get:
+ *     summary: Get my GPA
+ *     security: [ { bearerAuth: [] } ]
+ *     responses:
+ *       200: { description: OK }
+ *       401: { description: Unauthorized }
+ */
+
+
 import express from "express";
 import { pool } from "../../server.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";

@@ -9,9 +9,32 @@ import gradeRoutes from "./src/routes/grades.js";
 import userRoutes from "./src/routes/users.js";
 import helmet from "helmet";
 import morgan from "morgan";
+import swaggerUi from "swagger-ui-express";
+import swaggerJsdoc from "swagger-jsdoc";
 
 dotenv.config();
 const { Pool } = pkg;
+
+const swaggerSpec = swaggerJsdoc({
+    definition: {
+        openapi: "3.0.0",
+        info: { title: "CourseHub API", version: "1.0.0" },
+        servers: [{ url: process.env.SERVER_URL || "http://localhost:3000" }],
+        components: {
+            securitySchemes: { bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" } }
+        },
+        security: [{ bearerAuth: [] }],
+        paths: {
+            "/health": {
+                get: {
+                    summary: "Health check",
+                    responses: { 200: { description: "OK" } }
+                }
+            }
+        }
+    },
+    apis: ["./src/routes/*.js"],
+});
 
 // Pool config
 export const pool = new Pool({
@@ -31,8 +54,8 @@ app.use(express.json());
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
 // Root
-app.get("/", (_req, res) => {
-    res.send("Techtonica Academy CourseHub backend is running");
+app.get("/", (req, res) => {
+    res.redirect(302, "/docs");
 });
 
 // DB test
@@ -56,6 +79,7 @@ app.use("/courses", courseRoutes);
 app.use("/enrollments", enrollmentRoutes);
 app.use("/grades", gradeRoutes);
 app.use("/users", userRoutes);
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true }));
 
 const PORT = process.env.PORT || 3000;
 

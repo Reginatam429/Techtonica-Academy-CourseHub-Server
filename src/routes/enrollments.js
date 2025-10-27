@@ -1,3 +1,35 @@
+/**
+ * @openapi
+ * /enrollments:
+ *   post:
+ *     summary: Enroll current user in a course
+ *     security: [ { bearerAuth: [] } ]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [courseId]
+ *             properties:
+ *               courseId: { type: integer, example: 1 }
+ *     responses:
+ *       201: { description: Enrolled }
+ *       401: { description: Unauthorized }
+ */
+
+/**
+ * @openapi
+ * /enrollments/me:
+ *   get:
+ *     summary: List my enrollments
+ *     security: [ { bearerAuth: [] } ]
+ *     responses:
+ *       200: { description: OK }
+ *       401: { description: Unauthorized }
+ */
+
+
 import express from "express";
 import { pool } from "../../server.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";

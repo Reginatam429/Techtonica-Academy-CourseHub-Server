@@ -1,3 +1,19 @@
+/**
+ * @openapi
+ * /users:
+ *   get:
+ *     summary: Search users (?query=)
+ *     security: [ { bearerAuth: [] } ]
+ *     parameters:
+ *       - in: query
+ *         name: query
+ *         schema: { type: string }
+ *     responses:
+ *       200: { description: OK }
+ *       401: { description: Unauthorized }
+ */
+
+
 import express from "express";
 import bcrypt from "bcrypt";
 import { pool } from "../../server.js";

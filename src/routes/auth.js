@@ -1,3 +1,46 @@
+/**
+ * @openapi
+ * /auth/register:
+ *   post:
+ *     summary: Register a new user
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [firstName, lastName, email, password]
+ *             properties:
+ *               firstName: { type: string, example: Ada }
+ *               lastName:  { type: string, example: Lovelace }
+ *               email:     { type: string, example: ada@coursehub.io }
+ *               password:  { type: string, example: secret }
+ *     responses:
+ *       201: { description: Created }
+ *       400: { description: Bad request }
+ */
+
+/**
+ * @openapi
+ * /auth/login:
+ *   post:
+ *     summary: Log in and receive a JWT
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password]
+ *             properties:
+ *               email:    { type: string, example: ada@coursehub.io }
+ *               password: { type: string, example: secret }
+ *     responses:
+ *       200: { description: OK }
+ *       401: { description: Invalid credentials }
+ */
+
+
 import express from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
