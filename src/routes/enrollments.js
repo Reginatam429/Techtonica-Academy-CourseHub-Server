@@ -146,23 +146,27 @@ router.get("/course/:courseId", requireAuth, requireRole("TEACHER","ADMIN"), asy
             if (owner[0].teacher_id !== req.user.id) return res.status(403).json({ error: "Not your course" });
         }
 
-    const { rows } = await pool.query(
-        `
-        SELECT DISTINCT ON (g.student_id)
-            g.student_id,
-            u.name  AS student_name,
-            u.email,
-            g.value::text AS grade,
-            g.assigned_at
-        FROM grades g
-        JOIN users u ON u.id = g.student_id
-        WHERE g.course_id = $1
-        ORDER BY g.student_id, g.assigned_at DESC
-        `,
-        [courseId]
-        );
-
-    return res.json(rows);
+        const sql = `
+        SELECT 
+            e.id,                     -- enrollment id
+            e.student_id,             -- student user id
+            u.name, u.email, 
+            u.student_id AS student_code,
+            (
+                SELECT g.value::text
+                FROM grades g
+                WHERE g.student_id = e.student_id
+                AND g.course_id  = e.course_id
+                ORDER BY g.assigned_at DESC
+                LIMIT 1
+            ) AS latest_grade
+        FROM enrollments e
+        JOIN users u ON u.id = e.student_id
+        WHERE e.course_id = $1
+        ORDER BY u.name ASC
+        `;
+        const { rows } = await pool.query(sql, [courseId]);
+        return res.json(rows);
     } catch (e) {
         console.error(e);
         return res.status(500).json({ error: "Server error" });
