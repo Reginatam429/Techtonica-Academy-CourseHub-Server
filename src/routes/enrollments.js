@@ -173,5 +173,84 @@ router.get("/course/:courseId", requireAuth, requireRole("TEACHER","ADMIN"), asy
     }
 });
 
+// BULK ENROLL (Teacher owns course or Admin)
+router.post("/bulk", requireAuth, requireRole("TEACHER","ADMIN"), async (req, res) => {
+    try {
+        const { courseId, studentIds } = req.body || {};
+        if (!courseId || !Array.isArray(studentIds) || studentIds.length === 0) {
+            return res.status(400).json({ error: "courseId and studentIds[] are required" });
+        }
+    
+        // Ownership check for teachers
+        if (req.user.role === "TEACHER") {
+            const { rows: owner } = await pool.query(
+            `SELECT teacher_id FROM courses WHERE id=$1`, [courseId]
+            );
+            if (!owner[0]) return res.status(404).json({ error: "Course not found" });
+            if (owner[0].teacher_id !== req.user.id) return res.status(403).json({ error: "Not your course" });
+        }
+    
+        // Capacity left
+        const { rows: cap } = await pool.query(`
+            SELECT c.enrollment_limit::int - COALESCE(e.count,0)::int AS seats_left
+            FROM courses c
+            LEFT JOIN (SELECT course_id, COUNT(*)::int AS count FROM enrollments WHERE course_id=$1 GROUP BY 1) e
+            ON e.course_id=c.id
+            WHERE c.id=$1
+        `, [courseId]);
+        if (!cap[0]) return res.status(404).json({ error: "Course not found" });
+    
+        let seatsLeft = Math.max(0, cap[0].seats_left);
+    
+        // Get prereqs for the course
+        const { rows: prereqs } = await pool.query(
+            `SELECT prereq_id FROM course_prereqs WHERE course_id=$1`, [courseId]
+        );
+        const prereqIds = prereqs.map(r => r.prereq_id);
+    
+        // For each student, check duplicate, prereqs, capacity, then enroll
+        const results = [];
+        for (const sid of studentIds) {
+            if (seatsLeft <= 0) { results.push({ studentId: sid, ok:false, reason:"capacity" }); continue; }
+    
+            // already enrolled?
+            const { rows: exists } = await pool.query(
+            `SELECT 1 FROM enrollments WHERE student_id=$1 AND course_id=$2 LIMIT 1`, [sid, courseId]
+            );
+            if (exists[0]) { results.push({ studentId: sid, ok:false, reason:"already_enrolled" }); continue; }
+    
+            // prereq check: for each prereq course, latest grade must not be 'F'
+            if (prereqIds.length > 0) {
+            const { rows: g } = await pool.query(`
+                WITH latest AS (
+                SELECT DISTINCT ON (course_id) course_id, value
+                FROM grades
+                WHERE student_id=$1 AND course_id = ANY($2::int[])
+                ORDER BY course_id, assigned_at DESC
+                )
+                SELECT course_id, value FROM latest
+            `, [sid, prereqIds]);
+            const passedAll = prereqIds.every(pid => {
+                const lg = g.find(x => x.course_id === pid)?.value || null;
+                return lg && lg !== "F"; // treat anything except F as pass
+            });
+            if (!passedAll) { results.push({ studentId: sid, ok:false, reason:"prereq" }); continue; }
+            }
+    
+            // insert
+            await pool.query(
+            `INSERT INTO enrollments (student_id, course_id) VALUES ($1,$2)`,
+            [sid, courseId]
+            );
+            seatsLeft -= 1;
+            results.push({ studentId: sid, ok:true });
+        }
+    
+        return res.status(200).json({ results, seatsLeft });
+    } catch (e) {
+        console.error(e);
+        return res.status(500).json({ error: "Server error" });
+    }
+});
 
 export default router;
